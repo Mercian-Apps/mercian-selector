@@ -3,3 +3,4 @@ waitress
 python-dotenv
 openai
 requests
+pandas
