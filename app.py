@@ -86,7 +86,9 @@ def _finish_timer(resp):
 
 @app.get("/")
 def home():
-    return "Selector API is up"
+    from flask import render_template
+    return render_template("index.html")
+
 
 # [MOD] healthz for probes
 @app.get("/healthz")
