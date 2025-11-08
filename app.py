@@ -402,6 +402,7 @@ def recommend():
 
         combined_prompt = f"{prompt}\n\nCONTEXT:\n{context}"
         profile["_custom_prompt"] = combined_prompt
+        print(f"DBG counts — primaries:{len(primaries_out)} wildcard:{len(wildcard_out)} df_rows:{getattr(df, 'shape', ['?','?'])[0]}")
         raw_rationale = generate_rationale(profile, primaries_out, wildcard_out)
 
         # Normalise to string
