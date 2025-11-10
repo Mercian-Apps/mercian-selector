@@ -321,7 +321,8 @@ if (data.wildcard) {
 if (data.rationale) {
   const r = data.rationale;
   const text = r.summary_html || r.summary || "";
-  html += `<div class="popup-box"><strong>Why these?</strong> ${text}</div>`;
+  const needsHeading = !r.summary_html && !(typeof text === "string" && /^\s*(why these\??)/i.test(text));
+  html += `<div class="popup-box">${needsHeading ? '<strong>Why these?</strong> ' : ''}${text}</div>`;
 }
 
         resultBox.innerHTML = html;
