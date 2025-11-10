@@ -5,6 +5,22 @@ from config import settings
 import json
 import re
 
+# --- L2 diagnostics (enabled only when DIAGNOSTICS=1) ---
+import os, time, hashlib
+
+def _diag_log(label: str, content: str):
+    if os.getenv("DIAGNOSTICS") != "1":
+        return
+    ts = time.strftime("%Y%m%d_%H%M%S")
+    h  = hashlib.sha1(content.encode("utf-8")).hexdigest()[:6]
+    os.makedirs("logs", exist_ok=True)
+    path = f"logs/L2_{label}_{ts}_{h}.txt"
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+    except Exception:
+        pass  # never block app flow
+
 PROMPT_SPEC_V1_0 = """
 ### MERCIAN STICK SELECTOR – EXPERT NARRATIVE SPECIFICATION ###
 
@@ -65,22 +81,36 @@ client = OpenAI(api_key=s.openai_api_key)
 def generate_rationale(profile, primaries, wildcard, allowed_bows=None):
     # --- If app.py provided a full custom prompt, use it directly ---
     if profile.get("_custom_prompt"):
+        # L2: build messages explicitly so we can log exactly what we send
+        messages = [
+            {"role": "system", "content": "You are Mercian’s equipment expert."},
+            {"role": "user",   "content": profile["_custom_prompt"]},
+        ]
+
+        # L2: capture request to the model
+        try:
+            import json as _json
+            _diag_log("pre_ai", _json.dumps(messages, ensure_ascii=False, indent=2))
+        except Exception:
+            _diag_log("pre_ai", str(profile.get("_custom_prompt", "")))
+
+        print("L2_MARK reached OpenAI call (_custom_prompt path)")
+
         try:
             resp = client.chat.completions.create(
                 model=s.model,
-                messages=[
-                    {"role": "system", "content": "You are Mercian’s equipment expert."},
-                    {"role": "user", "content": profile["_custom_prompt"]},
-                ],
+                messages=messages,
                 max_tokens=s.max_tokens,
                 temperature=min(0.3, s.temperature),
                 timeout=s.request_timeout,
             )
-            content = resp.choices[0].message.content.strip() if resp.choices else ""
-            return {"summary": content, "bullets": []}
+            raw = resp.choices[0].message.content.strip()
+            _diag_log("post_ai", raw)
+            return {"summary": raw, "bullets": []}
         except Exception as e:
             print("RATIONALE ERROR (custom prompt):", repr(e))
             # fall through to legacy short-form prompt
+
 
     # --- Pull true bow context from injected fields (added by adapters) ---
     bow1 = profile.get("_p1_bow") or (primaries[0].get("Bow", "") if primaries else "")
@@ -156,7 +186,8 @@ def generate_rationale(profile, primaries, wildcard, allowed_bows=None):
         sc_line = " Solid Core construction features in this range to enhance touch and feedback under pressure." if any_sc else ""
         close = " The result is confident, repeatable performance that lets you play on the front foot with precision."
 
-        summary_text = f"Why these?\n{lead}{family_line} {power_touch}{sc_line}{close}"
+        summary_text = f"{lead}{family_line} {power_touch}{sc_line}{close}"
+        _diag_log("pre_return_deterministic", summary_text.strip())
         return {"summary": summary_text.strip(), "bullets": []}
 
     prompt = f"""
@@ -202,6 +233,9 @@ Return a JSON object ONLY:
   "bullets": ["point 1", "point 2"]
 }}
 """
+
+    _diag_log("pre_ai", prompt)
+
 
     try:
         resp = client.chat.completions.create(
