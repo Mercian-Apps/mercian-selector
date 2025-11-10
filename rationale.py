@@ -90,6 +90,8 @@ def generate_rationale(profile, primaries, wildcard, allowed_bows=None):
             _diag_log("pre_ai", str(profile.get("_custom_prompt", "")))
         print("L2_MARK reached OpenAI call (_custom_prompt path)")
 
+        # L2_FIX: wrap OpenAI call in its own try/except and fix indentation
+        try:
             resp = client.chat.completions.create(
                 model=s.model,
                 messages=[
@@ -105,6 +107,7 @@ def generate_rationale(profile, primaries, wildcard, allowed_bows=None):
         except Exception as e:
             print("RATIONALE ERROR (custom prompt):", repr(e))
             # fall through to legacy short-form prompt
+
 
     # --- Pull true bow context from injected fields (added by adapters) ---
     bow1 = profile.get("_p1_bow") or (primaries[0].get("Bow", "") if primaries else "")
