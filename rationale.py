@@ -82,32 +82,40 @@ def generate_rationale(profile, primaries, wildcard, allowed_bows=None):
     # --- If app.py provided a full custom prompt, use it directly ---
     if profile.get("_custom_prompt"):
         # L2: capture exactly what we are about to send
-        try:
-            import json as _json
-            _diag_log("pre_ai", _json.dumps(messages, ensure_ascii=False, indent=2))
-        except Exception:
-            # fallback if 'messages' isn't defined in this branch
-            _diag_log("pre_ai", str(profile.get("_custom_prompt", "")))
+        import json as _json
+        messages = [
+            {"role": "system", "content": "You are Mercian’s equipment expert."},
+            {"role": "user", "content": profile["_custom_prompt"]},
+        ]
+        _diag_log("pre_ai", _json.dumps(messages, ensure_ascii=False, indent=2))
         print("L2_MARK reached OpenAI call (_custom_prompt path)")
 
-        # L2_FIX: wrap OpenAI call in its own try/except and fix indentation
-        try:
-            resp = client.chat.completions.create(
-                model=s.model,
-                messages=[
-                    {"role": "system", "content": "You are Mercian’s equipment expert."},
-                    {"role": "user", "content": profile["_custom_prompt"]},
-                ],
-                max_tokens=s.max_tokens,
-                temperature=min(0.3, s.temperature),
-                timeout=s.request_timeout,
-            )
-            content = resp.choices[0].message.content.strip() if resp.choices else ""
-            _diag_log("rationale_source", "ai")
-            return {"summary": content, "bullets": [], "source": "ai"}
-        except Exception as e:
-            print("RATIONALE ERROR (custom prompt):", repr(e))
-            # fall through to legacy short-form prompt
+        import time  # local import is fine; keeps this change self-contained
+
+        # Robust OpenAI call with retries + longer timeout + precise logs
+        for _try in range(1, 4):
+            try:
+                t0 = time.time()
+                resp = client.chat.completions.create(
+                    model=s.model,
+                    messages=messages,
+                    max_tokens=s.max_tokens,
+                    temperature=min(0.3, s.temperature),
+                    timeout=max(s.request_timeout, 30),  # ensure ≥30s
+                )
+                dt_ms = int((time.time() - t0) * 1000)
+                content = resp.choices[0].message.content.strip() if resp.choices else ""
+                _diag_log("post_ai", f"ms={dt_ms} chars={len(content)} :: {content[:4000]}")
+                _diag_log("rationale_source", "openai")
+                return {"summary": content, "bullets": [], "source": "openai"}
+            except Exception as e:
+                _diag_log("post_ai_retry", f"try={_try} error={repr(e)}")
+                time.sleep(0.8 * _try)
+
+        # If we get here, OpenAI failed all tries; fall through to deterministic path
+        _diag_log("rationale_source", "deterministic_fallback")
+
+        # fall through to legacy short-form prompt
 
 
     # --- Pull true bow context from injected fields (added by adapters) ---
