@@ -103,8 +103,8 @@ def generate_rationale(profile, primaries, wildcard, allowed_bows=None):
                 timeout=s.request_timeout,
             )
             content = resp.choices[0].message.content.strip() if resp.choices else ""
-            _diag_log("post_ai", content[:4000])  # L2_DIAG: capture raw AI text (truncated)
-            return {"summary": content, "bullets": []}
+            _diag_log("rationale_source", "ai")
+            return {"summary": content, "bullets": [], "source": "ai"}
         except Exception as e:
             print("RATIONALE ERROR (custom prompt):", repr(e))
             # fall through to legacy short-form prompt
@@ -186,8 +186,8 @@ def generate_rationale(profile, primaries, wildcard, allowed_bows=None):
 
         summary_text = f"Why these?\n{lead}{family_line} {power_touch}{sc_line}{close}"
         _diag_log("deterministic_out", summary_text[:4000])  # L2_DIAG: capture deterministic text
-        _diag_log("pre_return_deterministic", summary_text.strip())
-        return {"summary": summary_text.strip(), "bullets": []}
+        _diag_log("rationale_source", "deterministic")
+        return {"summary": summary_text.strip(), "bullets": [], "source": "deterministic"}
 
     prompt = f"""
 CONSTRAINTS:
