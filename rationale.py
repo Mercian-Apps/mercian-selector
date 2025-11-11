@@ -252,10 +252,19 @@ Return a JSON object ONLY:
 """
 
     _diag_log("pre_ai", prompt)
-
-
-# change (new or modified lines)
-    t0 = time.time()
+    # L2_DIAG: full OpenAI input log (model + token count + prompt snippet)
+    try:
+        _log_in = {
+            "model": s.model,
+            "max_tokens": s.max_tokens,
+            "temperature": s.temperature,
+            "timeout": s.request_timeout,
+            "prompt_len": len(prompt),
+            "prompt_preview": prompt[:600]
+        }
+        print("L2_DIAG OPENAI_INPUT:", _log_in)
+    except Exception as _e_in:
+        print("L2_DIAG OPENAI_INPUT_LOG_ERROR:", repr(_e_in))
 
 # line after (unchanged)
     try:
