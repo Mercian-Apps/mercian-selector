@@ -81,9 +81,11 @@ client = OpenAI(api_key=s.openai_api_key)
 def generate_rationale(profile, primaries, wildcard, allowed_bows=None):
     print("L2_DIAG: ENTERED generate_rationale()")
     import sys; sys.stdout.flush()
+    print("L2_DIAG profile_keys:", sorted(list(profile.keys())))
 
     # --- If app.py provided a full custom prompt, use it directly ---
     if profile.get("_custom_prompt"):
+        print("L2_DIAG custom_prompt_detected:", bool(profile.get("_custom_prompt")))
         # L2: capture exactly what we are about to send
         import json as _json
         messages = [
@@ -163,6 +165,7 @@ def generate_rationale(profile, primaries, wildcard, allowed_bows=None):
 
     # Deterministic non-comparative path: skip the model when there's nothing valid to compare
     if same_family and same_length:
+        print("L2_DIAG deterministic_branch: same_family_and_length=True")
         print("RATIONALE MODE: deterministic return")
         items = []
         for s_ in (primaries or [])[:2]:
