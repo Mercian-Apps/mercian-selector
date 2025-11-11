@@ -79,21 +79,40 @@ client = OpenAI(api_key=s.openai_api_key)
 
 
 def generate_rationale(profile, primaries, wildcard, allowed_bows=None):
-    print("L2_DIAG: ENTERED generate_rationale()")
-    import sys; sys.stdout.flush()
-    print("L2_DIAG profile_keys:", sorted(list(profile.keys())))
+    try:
+        if not isinstance(profile, dict):
+            raise TypeError(f"profile is {type(profile).__name__}, expected dict")
+        print("L2_DIAG: ENTERED generate_rationale()")
+        import sys; sys.stdout.flush()
+        print("L2_DIAG profile_keys:", sorted(list(profile.keys())))
+    except Exception as _e:
+        print("L2_DIAG: ENTRY ERROR in generate_rationale ->", repr(_e))
+        import sys; sys.stdout.flush()
+        # fail safe into deterministic minimal result instead of crashing
+        return {
+            "summary": "System note: unable to read profile cleanly; returning deterministic rationale.",
+            "bullets": [],
+            "source": "deterministic",
+            "meta": {"error": repr(_e)}
+        }
 
     # --- If app.py provided a full custom prompt, use it directly ---
     if profile.get("_custom_prompt"):
-        print("L2_DIAG custom_prompt_detected:", bool(profile.get("_custom_prompt")))
-        # L2: capture exactly what we are about to send
-        import json as _json
-        messages = [
-            {"role": "system", "content": "You are Mercian’s equipment expert."},
-            {"role": "user", "content": profile["_custom_prompt"]},
-        ]
-        _diag_log("pre_ai", _json.dumps(messages, ensure_ascii=False, indent=2))
-        print("L2_MARK reached OpenAI call (_custom_prompt path)")
+        try:
+            import json as _json
+            messages = [
+                {"role": "system", "content": "You are Mercian’s equipment expert."},
+                {"role": "user", "content": profile["_custom_prompt"]},
+            ]
+            _diag_log("pre_ai", _json.dumps(messages, ensure_ascii=False, indent=2))
+            print("L2_MARK reached OpenAI call (_custom_prompt path)")
+        except Exception as _e:
+            print("L2_DIAG custom_prompt prep error:", repr(_e))
+            import sys; sys.stdout.flush()
+            messages = [
+                {"role": "system", "content": "You are Mercian’s equipment expert."},
+                {"role": "user", "content": str(profile.get("_custom_prompt", ""))},
+            ]
 
         import time  # local import is fine; keeps this change self-contained
 
@@ -121,6 +140,9 @@ def generate_rationale(profile, primaries, wildcard, allowed_bows=None):
             except Exception as e:
                 _diag_log("post_ai_retry", f"try={_try} error={repr(e)}")
                 time.sleep(0.8 * _try)
+
+        # If we get here, OpenAI failed all tries; surface error explicitly
+        return {"summary": "", "bullets": [], "source": "openai_error", "meta": {"error": "openai_call_failed"}}
 
         # If we get here, OpenAI failed all tries; fall through to deterministic path
         _diag_log("rationale_source", "deterministic_fallback")
