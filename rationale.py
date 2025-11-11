@@ -185,55 +185,10 @@ def generate_rationale(profile, primaries, wildcard, allowed_bows=None):
     )
     print(f"RATIONALE MODE? same_family={same_family}, same_length={same_length}, families={families}")
 
-    # Deterministic non-comparative path: skip the model when there's nothing valid to compare
+    # Even if family/length align, we still want an AI narrative; do not return early.
     if same_family and same_length:
-        print("L2_DIAG deterministic_branch: same_family_and_length=True")
-        print("RATIONALE MODE: deterministic return")
-        items = []
-        for s_ in (primaries or [])[:2]:
-            if s_:
-                items.append({
-                    "title": s_.get("Title") or s_.get("Description") or "",
-                    "code": s_.get("Product Code") or "",
-                    "carbon": s_.get("Carbon") or "",
-                    "solid_core": "SC" in (s_.get("Title") or "") or "Solid Core" in (s_.get("Description") or "")
-                })
-        if wildcard:
-            items.append({
-                "title": wildcard.get("Title") or wildcard.get("Description") or "",
-                "code": wildcard.get("Product Code") or "",
-                "carbon": wildcard.get("Carbon") or "",
-                "solid_core": "SC" in (wildcard.get("Title") or "") or "Solid Core" in (wildcard.get("Description") or "")
-            })
-
-        any_sc = any(x["solid_core"] for x in items)
-        highest_carbon = max((int(float(x.get("carbon") or 0)) for x in items if str(x.get("carbon") or "").strip() not in ("", "nan")), default=0)
-
-
-        lead = (
-            f"Because you prioritise attacking play and aerial skills, we've selected three sticks that match your style "
-            f"and sit comfortably within your £{profile.get('budget')} budget."
-        )
-        family_line = (
-            f" Each model uses Mercian’s {family_name} profile, optimised for fast lifts, clean 3D execution and quick release."
-        )
-        power_touch = (
-            " Their high-carbon lay-ups provide the power you expect while preserving the responsive feel for close control."
-            if highest_carbon >= 90 else
-            " Their balanced lay-ups keep touch and feel at the forefront while still delivering confident hitting power."
-        )
-        sc_line = " Solid Core construction features in this range to enhance touch and feedback under pressure." if any_sc else ""
-        close = " The result is confident, repeatable performance that lets you play on the front foot with precision."
-
-        summary_text = f"Why these?\n{lead}{family_line} {power_touch}{sc_line}{close}"
-        _diag_log("deterministic_out", summary_text[:4000])  # L2_DIAG: capture deterministic text
-        _diag_log("rationale_source", "deterministic")
-        return {
-            "summary": summary_text.strip(),
-            "bullets": [],
-            "source": "deterministic",
-            "meta": {"chars": len(summary_text)}
-        }
+        print("L2_NOTE: identical family & length detected — proceeding to OpenAI narrative")
+    # (no return here; flow continues into prompt building)
 
     prompt = f"""
 CONSTRAINTS:
@@ -294,6 +249,11 @@ Return a JSON object ONLY:
     except Exception as _e_in:
         print("L2_DIAG OPENAI_INPUT_LOG_ERROR:", repr(_e_in))
 
+    # Prepare timing/error holders for the OpenAI call
+    t0 = time.time()
+    last_err = None
+
+
 # line after (unchanged)
     try:
         resp = client.chat.completions.create(
@@ -335,4 +295,5 @@ Return a JSON object ONLY:
 
     except Exception as e:
         print("RATIONALE ERROR:", repr(e))
-        return None
+            return {"summary": "", "bullets": [], "source": "openai_error", "meta": {"error": repr(e)}}
+
