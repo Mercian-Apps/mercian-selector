@@ -79,6 +79,9 @@ client = OpenAI(api_key=s.openai_api_key)
 
 
 def generate_rationale(profile, primaries, wildcard, allowed_bows=None):
+    print("L2_DIAG: ENTERED generate_rationale()")
+    import sys; sys.stdout.flush()
+
     # --- If app.py provided a full custom prompt, use it directly ---
     if profile.get("_custom_prompt"):
         # L2: capture exactly what we are about to send
