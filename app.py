@@ -33,6 +33,8 @@ ALLOWED_ORIGINS = [
     "http://aissess-test.local",
     "http://aissess-test.local:5000",
     "http://192.168.0.19",
+    "https://mercianhockey.com",
+    "https://www.mercianhockey.com",
 ]
 
 CORS(app, resources={
