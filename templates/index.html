@@ -55,7 +55,7 @@
       border-radius: 5px;
       outline: none;
       transition: background .3s;
-      accent-color: #5cb3da; /* Mercian secondary blue fallback */
+      accent-color: #0075c9; /* Mercian secondary blue fallback */
     }
 
     /* Ensure Safari/iOS applies custom thumb */
@@ -65,7 +65,7 @@
       height: 20px;
       border-radius: 50%;
       cursor: pointer;
-      background: #5cb3da;   /* Mercian secondary blue */
+      background: #0075c9;   /* Mercian secondary blue */
     }
 
     .result { margin-top: 30px; padding: 20px; border: 1px solid #ccc; background-color: #f9f9f9; }
@@ -197,7 +197,7 @@
   </select>
 
   <label for="bow">Preferred Bow Type</label>
-  <a href="/bow-guide.pdf" target="_blank" class="info-icon">ⓘ</a>
+  <a class="info-icon" title="Guide coming soon" style="color:#aaa; cursor:default;">ⓘ</a>
   <select id="bow" name="bow">
     <option value="unknown">Don’t Know</option>
     <option value="standard">Standard Bend</option>
@@ -207,6 +207,7 @@
     <option value="xtreme">Xtreme Bend</option>
     <option value="znake">Znake Bend</option>
   </select>
+
 
   <div class="label-with-icon">
     <label for="length">What stick length do you want?</label>
